@@ -15,7 +15,7 @@ void sigchd_handler()
 	pid_t pid = waitpid(-1, &status, WNOHANG);
 	// if (!(int)WEXITSTATUS(status)) {
 		int i, flag=0;
-		for (i=0;i<nof_bg_proc;i++) {
+		for (i=0;i<job_number;i++) {
 			if (bg_proc[i].pid == (int) pid) {
 				bg_proc[i].pstatus = 0;
 				flag = 1;
@@ -25,7 +25,15 @@ void sigchd_handler()
 		if (flag == 1) {
 			nof_bg_proc--;
 			int exit_status = WEXITSTATUS(status);
+			stpd_process[nof_bg_stpd_proc].pid = (int)pid;
+			stpd_process[nof_bg_stpd_proc].pname = bg_proc[i].pname;
+			stpd_process[nof_bg_stpd_proc].pstat = malloc(10*sizeof(char));
+			stpd_process[nof_bg_stpd_proc].pstat = "Stopped";
+			stpd_process[nof_bg_stpd_proc].pjob_num = bg_proc[i].pjob_num;
+			stpd_process[nof_bg_stpd_proc].pstatus =  bg_proc[i].pstatus;
+			nof_bg_stpd_proc++;
 			if (exit_status == 0) fprintf(stderr, "[%d] Done normally\t\t%s\n",(int)pid, bg_proc[i].pname);
+				
 			else if(exit_status == 1) fprintf(stderr, "[%d] Done with impermisable opertaion errors \t\t%s\n",(int)pid, bg_proc[i].pname);
 			else if (exit_status == 126) fprintf(stderr, "[%d] Done with permission problem \t\t%s\n",(int)pid, bg_proc[i].pname);
 		}
