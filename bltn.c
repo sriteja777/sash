@@ -5,12 +5,200 @@
 #include<unistd.h>
 #include<sys/stat.h>
 #include<sys/types.h>
+#include<signal.h>
 #include<errno.h>
 #include<string.h>
 #include<dirent.h>
 #include<time.h>
 #include<pwd.h>
 #include<grp.h>
+#include<ctype.h>
+#include <signal.h>
+#include<sys/wait.h>
+#include<dirent.h>
+
+int is_num(char number[])
+{
+    int i = 0;
+    for (; number[i] != 0; i++)
+    {
+        //if (number[i] > '9' || number[i] < '0')
+        if (!isdigit(number[i]))
+            return -1;
+    }
+    return 0;
+}                                                                               
+
+int bltn_fg(arg_ret cmd) {
+    if (cmd.noa !=2 ) {
+        printf("Usage: fg job_id\n");
+        return -1;
+    }
+    if (is_num(cmd.args[1])<0) {
+        printf("fg: argument 1 must be a job id\n");
+        return -1;
+    }
+    int num = atoi(cmd.args[1]);
+    // if ((job_id < 0) && (job_id > nof_bg_proc)) {
+    //     printf("fg: No such Running job");
+    // }
+    int flag=0;
+    int i;
+    for(i=0;i<job_number;i++) {
+        if (bg_proc[i].pstatus!=0 && bg_proc[i].pjob_num==num) {
+            // printf("%d: No such job", num);
+            flag=1;
+            break;
+        }
+    }
+
+    if (flag == 0)  {
+        printf("%d: No such background runing or suspended job\n", num);
+        return -1;
+    }
+
+    if (kill(bg_proc[i].pid, SIGCONT)==-1) {
+        perror("kill");
+    }
+    int sig_num;
+    int status;
+    printf("%s\n",bg_proc[i].pname);
+    waitpid(bg_proc[i].pid, &status, WUNTRACED);
+    // printf("came\n");
+    if (WIFSTOPPED(status)) {
+        // printf("came here\n");
+        sig_num = WSTOPSIG(status);
+        // printf("%d",sig_num);
+        if (sig_num == SIGTSTP) {
+            printf("[%d] Suspended \t\t %s \n",bg_proc[i].pid, bg_proc[i].pname);
+            
+        }
+    }
+    else if (WIFSIGNALED(status)) {
+        if (WTERMSIG(status) == SIGINT){
+            printf("[%d] Killed \t\t %s \n",(int)bg_proc[i].pid, bg_proc[i].pname);
+        }
+    }
+			
+    
+
+}
+
+int bltn_bg(arg_ret cmd) {
+    if (cmd.noa !=2 ) {
+        printf("Usage: bg job_id\n");
+        return -1;
+    }
+    if (is_num(cmd.args[1])<0) {
+        printf("bg: argument 1 must be a job id\n");
+        return -1;
+    }
+    int num = atoi(cmd.args[1]);
+    // if ((job_id < 0) && (job_id > nof_bg_proc)) {
+    //     printf("fg: No such Running job");
+    // }
+    int flag=0;
+    int i;
+    for(i=0;i<job_number;i++) {
+        if (bg_proc[i].pstatus!=0 && bg_proc[i].pjob_num==num) {
+            // printf("%d: No such job", num);
+            flag=1;
+            break;
+        }
+    }
+    if (flag == 0)  {
+        printf("%d: No such Background job\n", num);
+        return -1;
+    }
+    kill((pid_t)bg_proc[i].pid, SIGTTIN);
+    kill((pid_t)bg_proc[i].pid, SIGCONT);
+    printf("[%d]\t%d\n", job_number, (int)bg_proc[i].pid);
+			
+			bg_proc[nof_bg_proc].pstat = "Running";
+		
+			bg_proc[nof_bg_proc].pstatus = 1;
+		
+			
+    return 0;
+}
+
+int bltn_setenv(arg_ret cmd) {
+    if (cmd.noa <= 1 || cmd.noa > 3)
+     {  dprintf(2,"Usage: setenv var [value]\n");
+        return -1;
+     }
+     int status;
+     if (cmd.noa==2) { 
+         status=setenv(cmd.args[1], "", 1);
+     }
+    else status=setenv(cmd.args[1], cmd.args[2], 1);
+    if (status==-1) {
+        perror("setenv");
+    }
+}
+
+int bltn_unsetenv(arg_ret cmd) {
+    if (cmd.noa!=2){
+        printf("Usage unsetenv var\n");
+        return -1;
+    }
+    if (unsetenv(cmd.args[1])==-1) {
+        perror("unsetenv");
+        return -1;
+    }
+    return 0;
+
+}
+
+
+
+
+int bltn_kjob(arg_ret cmd) {
+    if (cmd.noa!=3 || (is_num(cmd.args[1])<0) || (is_num(cmd.args[1])<0) ) {
+        printf("Usage: kjob job_num signal_num\n");
+        return -1;
+    }
+    // printf("%d",is_num(cmd.args[1]));
+    // if(is_num(cmd.args[1]) < 0) {
+    //     printf("is not a number\n");
+    //     return -1;
+    // }
+    // return 0;
+    int num = atoi(cmd.args[1]);
+    int flag=0;
+    int i=0;
+    for(i=0;i<nof_bg_proc;i++) {
+        if (bg_proc[i].pstatus!=0 && bg_proc[i].pjob_num==num) {
+            // printf("%d: No such job", num);
+            flag=1;
+            break;
+        }
+    }
+    if (flag == 0)  {
+        printf("%d: No such Running job\n", num);
+        return -1;
+    }
+     
+    if ( kill( (pid_t)bg_proc[i].pid, atoi(cmd.args[2]) ) == -1 )  {
+        perror("kjob");
+    }
+    return 0;
+}
+
+int bltn_overkill(arg_ret cmd) {
+    if (cmd.noa > 1) {
+        printf("overkill doesn't accetpt any arguments\n");
+        return -1;
+    }
+    for (int i=0;i<job_number;i++) {
+        if(bg_proc[i].pstatus) {
+            if(kill((pid_t)bg_proc[i].pid, SIGKILL)<0)
+                perror("overkill");
+        }
+    }
+}
+
+
 int bltn_pwd(arg_ret cmd)
 {
     char cwd[PATH_MAX];
@@ -18,14 +206,18 @@ int bltn_pwd(arg_ret cmd)
         printf("Current working dir: %s\n", cwd);
     }
     else {
-        perror("sash: pwd");
+        perror("getcwd() error");
         return 1;
    }
    return 0;
 }
 int bltn_echo(arg_ret cmd)
 {
-    int i=0;
+    int i=1;
+    // int fd;
+    // if (cmd.output_red == 1) {
+    //     fd = open(, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    // }
     while(cmd.args[i]!=NULL) {
         printf("%s ", cmd.args[i]);
         i++;
@@ -40,7 +232,7 @@ int bltn_cd(arg_ret cmd)
     if (cmd.args[1] != NULL)
     {
         if (strcmp(cmd.args[1], "-") == 0)
-        {
+        { 
             if (strlen(OLDPWD) > 0) dir = OLDPWD;
             else
             {
@@ -48,9 +240,9 @@ int bltn_cd(arg_ret cmd)
                 return 0;
             }
         }
-        else if (cmd.args[1][0] == '~')
+        else if (cmd.args[1][0] == '~') 
         {
-            if (strlen(cmd.args[1]) > 1)
+            if (strlen(cmd.args[1]) > 1) 
             {
                 if (cmd.args[1][1] == '/')
                 {
@@ -58,7 +250,7 @@ int bltn_cd(arg_ret cmd)
                     strcat(dir, &cmd.args[1][1]);
                 }
                 else dir = cmd.args[1];
-            }
+            }           
             else dir = HOME;
         }
         else dir = cmd.args[1];
@@ -66,7 +258,7 @@ int bltn_cd(arg_ret cmd)
     else dir = HOME;
 
     int status = chdir(dir);
-
+            
     if (status != 0)
     {
         // write(2, dir, strlen(dir));
@@ -76,7 +268,7 @@ int bltn_cd(arg_ret cmd)
         perror("sash: cd");
     }
     else {
-        set_pwd();
+        set_pwd(); 
         set_rwd();
     }
 }
@@ -99,7 +291,7 @@ void permissions(char* file_path) {
 
 	i++;
 
-	if (bit & S_IRUSR) perm_strng[i] = 'r'; else perm_strng[i] = '-';i++;
+	if (bit & S_IRUSR) perm_strng[i] = 'r'; else perm_strng[i] = '-';i++; 
 	if (bit & S_IWUSR) perm_strng[i] = 'w'; else perm_strng[i] = '-';i++;
 	if (bit & S_IXUSR) perm_strng[i] = 'x'; else perm_strng[i] = '-';i++;
 	if (bit & S_IRGRP) perm_strng[i] = 'r'; else perm_strng[i] = '-';i++;
@@ -108,7 +300,7 @@ void permissions(char* file_path) {
 	if (bit & S_IROTH) perm_strng[i] = 'r'; else perm_strng[i] = '-';i++;
 	if (bit & S_IWOTH) perm_strng[i] = 'w'; else perm_strng[i] = '-';i++;
 	if (bit & S_IXOTH) perm_strng[i] = 'x'; else perm_strng[i] = '-';
-
+	
 	perm_strng[i] = ' '; i++;
 	perm_strng[i] = '\0';
 	printf("%s",perm_strng);
@@ -121,13 +313,13 @@ void permissions(char* file_path) {
     strcpy(t,ctime(&file.st_mtime));
     t[16]='\0';
     printf("%s ",t);
-	return;
+	return; 
 }
 
 
 
 int bltn_ls(arg_ret cmd)
-{
+{  
 	extern char* optarg;
 	extern int optind, opterr;
 	opterr = 0;
@@ -140,16 +332,16 @@ int bltn_ls(arg_ret cmd)
     char * directory = (char *)malloc(sizeof(char)*PATH_MAX);
     while(cmd.args[noa]!=NULL) noa++;
     char option;
-
+    
     	// option = getopt(noa, args, "la");
 
     	while ((option = getopt(noa, cmd.args,"la")) != -1) {
         switch (option) {
              case 'a' : got_a = 1;
                  break;
-             case 'l' : got_l = 1;
+             case 'l' : got_l = 1; 
                  break;
-             default: printf("Usage: -[la] {dir}\n");
+             default: printf("Usage: -[la] {dir}\n"); 
                  return -1;
         }
     }
@@ -159,9 +351,9 @@ int bltn_ls(arg_ret cmd)
     if (cmd.args[optind] == NULL){
     	directory = PWD;
     }
-    else if (cmd.args[optind][0] == '~')
+    else if (cmd.args[optind][0] == '~') 
     {
-        if (strlen(cmd.args[optind]) > 1)
+        if (strlen(cmd.args[optind]) > 1) 
         {
             if (cmd.args[optind][1] == '/')
             {
@@ -169,7 +361,7 @@ int bltn_ls(arg_ret cmd)
                 strcat(directory, &cmd.args[optind][1]);
             }
             else directory = cmd.args[optind];
-        }
+        }           
         else directory = HOME;
         // optind = 1;
     }
@@ -192,7 +384,7 @@ int bltn_ls(arg_ret cmd)
         	{
         		if (got_a) {
         			if (got_l)
-        			{
+        			{	
 		        		strcat(temp, "/");
 		        		strcat(temp, dir_struct->d_name);
 		        		permissions(temp);
@@ -213,12 +405,12 @@ int bltn_ls(arg_ret cmd)
 	        		// printf("%s\t", temp);
 	        		temp = (char*)malloc(PATH_MAX*sizeof(char));
 	        		strcpy(temp, directory);
-	        	}
+	        	}	
 	            printf("%s\n", dir_struct -> d_name);
-
+            	
             }
             dir_struct = readdir(direc);
-
+        	
         }
     }
     else {
@@ -286,7 +478,7 @@ int bltn_pinfo(arg_ret cmd)
   	// char *vmem=(char*)malloc(200*sizeof(char));
   	char state[200];
   	char vmem[200];
-
+  	
 
       while(val != NULL)
       {
@@ -315,7 +507,7 @@ int bltn_pinfo(arg_ret cmd)
 	// printf("%s\n", exec);
 
 	// exit(1);
-
+	
 }
 
 int bltn_exit(arg_ret cmd)
@@ -333,12 +525,16 @@ int bltn_exit(arg_ret cmd)
 
 int bltn_jobs(arg_ret cmd)
 {
-	printf("JOB_ID\tPID\tPROCESS\n");
+	printf("JOB_ID\tPID\tPROCESS\tSTATUS\n");
 	for(int i=0;i<job_number;i++)
 	{
 		if (bg_proc[i].pstatus)
-			printf("%-7d %-7d %s\n",bg_proc[i].pjob_num, bg_proc[i].pid, bg_proc[i].pname);
+			printf("%-7d %-7d %s %s\n",bg_proc[i].pjob_num, bg_proc[i].pid, bg_proc[i].pname, bg_proc[i].pstat);
 	}
+    for (int i=0;i<nof_bg_stpd_proc;i++)
+    {
+        printf("%-7d %-7d %s %s\n",stpd_process[i].pjob_num, stpd_process[i].pid, stpd_process[i].pname, stpd_process[i].pstat);
+    }
 }
 
 
