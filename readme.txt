@@ -8,7 +8,9 @@ Built in commands:
  -> echo
  -> jobs
  -> pinfo
+ -> overkill
+ -> kjob
 
 
- Executes foreground and background processes and informs about the exit status of the command.
+ Executes foreground and background processes and informs about the exit status of the command. Now added support for pipes and added many builtin commands to handle jobs
   
