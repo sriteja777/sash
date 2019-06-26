@@ -1,7 +1,10 @@
-sash shell
-"make main" command to compile the sheel and ./a.out to run the shell
+# sash shell
 
-Built in commands:
+## How to run?
+Compile - `make main`
+Run     -  `./a.out`  
+
+## Built in commands:
  -> cd
  -> ls
  -> pwd
