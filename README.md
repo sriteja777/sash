@@ -6,12 +6,19 @@ Run     -  `./a.out`
 
 ## Built in commands:
  -> cd
+ 
  -> ls
+ 
  -> pwd
+ 
  -> echo
+ 
  -> jobs
+ 
  -> pinfo
+ 
  -> overkill
+ 
  -> kjob
 
 
