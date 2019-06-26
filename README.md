@@ -5,21 +5,14 @@ Compile - `make main`
 Run     -  `./a.out`  
 
 ## Built in commands:
- -> cd
- 
- -> ls
- 
- -> pwd
- 
- -> echo
- 
- -> jobs
- 
- -> pinfo
- 
- -> overkill
- 
- -> kjob
+ -> cd<br/>
+ -> ls<br/>
+ -> pwd<br/>
+ -> echo<br/>
+ -> jobs<br/>
+ -> pinfo<br/>
+ -> overkill<br/>
+ -> kjob<br/>
 
 
  Executes foreground and background processes and informs about the exit status of the command. Now added support for pipes and added many builtin commands to handle jobs
